@@ -7,34 +7,37 @@ const input = fs
 
 const left = (i, j, input) => input[i].slice(0, j).reverse();
 const right = (i, j, input) => input[i].slice(j + 1);
-const up = (i, j, input) => input.slice(0, i).map((row) => row[j]).reverse();
+const up = (i, j, input) =>
+  input
+    .slice(0, i)
+    .map((row) => row[j])
+    .reverse();
 const down = (i, j, input) => input.slice(i + 1).map((row) => row[j]);
 
-const visible = (height, row) => row.every((num) => height > num);
-const score = (height, row) => row.findIndex((num) => height <= num) + 1 || row.length;
+const map2d = (fn, input) => input.map((row, i) => row.map((num, j) => fn(num, i, j, input)));
 
-let totalVisible = 0;
-let maxScore = 0;
-input.forEach((row, i) => {
-  row.forEach((num, j) => {
-    const currentVisible =
-      visible(num, left(i, j, input)) ||
-      visible(num, right(i, j, input)) ||
-      visible(num, up(i, j, input)) ||
-      visible(num, down(i, j, input));
-    if (currentVisible) {
-      totalVisible++;
-    }
-    const currentScore =
-      score(num, left(i, j, input)) *
-      score(num, right(i, j, input)) *
-      score(num, up(i, j, input)) *
-      score(num, down(i, j, input));
-    if (currentScore > maxScore) {
-      maxScore = currentScore;
-    }
-  });
-});
+const visible = (height, row) => row.every((num) => height > num);
+const visibleAllDirections = (height, i, j, input) =>
+  visible(height, left(i, j, input)) ||
+  visible(height, right(i, j, input)) ||
+  visible(height, up(i, j, input)) ||
+  visible(height, down(i, j, input));
+
+const count2d = (matrix) =>
+  matrix.reduce((acc, row) => acc + row.reduce((acc, num) => acc + num, 0), 0);
+
+const totalVisible = count2d(map2d(visibleAllDirections, input));
+
+const score = (height, row) => row.findIndex((num) => height <= num) + 1 || row.length;
+const scoreAllDirections = (height, i, j, input) =>
+  score(height, left(i, j, input)) *
+  score(height, right(i, j, input)) *
+  score(height, up(i, j, input)) *
+  score(height, down(i, j, input));
+
+const max2d = (matrix) => matrix.reduce((acc, row) => Math.max(acc, ...row), 0);
+
+const maxScore = max2d(map2d(scoreAllDirections, input));
 
 console.log(totalVisible);
 console.log(maxScore);
