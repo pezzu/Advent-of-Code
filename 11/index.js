@@ -8,9 +8,9 @@ const input = fs
 const parseMonkey = (monkey) => {
   const [_, items, operation, test, ifTure, ifFalse] = monkey.slice().split("\r\n");
   return {
-    items: parseItems(items),
+    items: parseItems(items).map(toRemainders),
     operation: parseOperation(operation),
-    test: parseTest(test),
+    test: parseTestRemainders(test),
     evaluate: parseEvaluate(ifTure, ifFalse),
     inspected: 0,
   };
@@ -20,22 +20,44 @@ const parseItems = (line) => {
   return line.slice(18).split(", ").map(Number);
 };
 
+const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23];
+
+const toRemainders = (num) => primes.map((prime) => num % prime);
+
 const parseOperation = (line) => {
   const [operator, value] = line.slice(23).split(" ");
   switch (operator) {
     case "*":
-      return (value === 'old')? old => old * old : (old) => old * Number(value);
+      return value === "old" ? (old) => sqr(old) : (old) => mult(old, Number(value));
     case "+":
-      return (value === 'old')? old => old + old : (old) => old + Number(value);
-
+      return (old) => add(old, Number(value));
   }
 
   throw new Error("Unknown operator: " + operator);
 };
 
+const add = (item, num) => {
+  return item.map((remainder, i) => (remainder + num) % primes[i]);
+};
+
+const mult = (item, num) => {
+  return item.map((remainder, i) => (remainder * num) % primes[i]);
+};
+
+const sqr = (item) => {
+  return item.map((remainder, i) => (remainder * remainder) % primes[i]);
+};
+
 const parseTest = (line) => {
   const value = Number(line.slice(21));
   return (level) => level % value == 0;
+};
+
+const parseTestRemainders = (line) => {
+  const value = Number(line.slice(21));
+  const primeIndex = primes.indexOf(value);
+  if(primeIndex === -1) throw new Error("Prime out of bound " + value);
+  return (level) => level[primeIndex] === 0;
 };
 
 const parseEvaluate = (ifTrue, ifFalse) => {
@@ -46,25 +68,27 @@ const parseEvaluate = (ifTrue, ifFalse) => {
 
 const inspect = (monkey, item) => {
   const level = monkey.operation(item);
-  const calm = Math.floor(level / 3);
-  // const calm = level;
   monkey.inspected++;
-  return calm;
+  return level;
 };
 
 const decide = (monkey, level) => {
   const result = monkey.test(level);
   return monkey.evaluate(result);
-}
+};
+
+const calm = (item) => {
+  // return Math.floor(item / 3)
+  return item;
+};
 
 const inspectAllItems = (activeMonkey, monkeys) => {
-
-  for(let i = 0; i < activeMonkey.items.length; i++) {
-    const item = activeMonkey.items[i];
-    const level = inspect(activeMonkey, item);
-    const next = decide(activeMonkey, level);
-    monkeys[next].items.push(level);
-  }
+  activeMonkey.items.forEach((initial) => {
+    const inspected = inspect(activeMonkey, initial);
+    const calmed = calm(inspected);
+    const next = decide(activeMonkey, calmed);
+    monkeys[next].items.push(calmed);
+  });
   activeMonkey.items = [];
   return monkeys;
 };
@@ -74,8 +98,7 @@ let monkeys = input.map(parseMonkey);
 const round = (monkeys) =>
   monkeys.forEach((activeMonkey, i, monkeys) => inspectAllItems(activeMonkey, monkeys));
 
-for (let i = 0; i < 20; i++) {
-  if(i % 10 === 0) console.log(i);
+for (let i = 0; i < 10000; i++) {
   round(monkeys);
 }
 
@@ -83,4 +106,4 @@ const inspected = monkeys.map((monkey) => monkey.inspected);
 console.log(inspected);
 
 inspected.sort((a, b) => b - a);
-console.log(inspected[0]*inspected[1]);
+console.log(inspected[0] * inspected[1]);
