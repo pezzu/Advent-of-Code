@@ -34,38 +34,39 @@ const visit = (rope) => {
 };
 
 const moveHead = (rope, step) => {
-  rope[0] = [rope[0][0] + step[0], rope[0][1] + step[1]];
+  const [head, ...tail] = rope;
+  const newHead = [head[0] + step[0], head[1] + step[1]];
+  return [newHead, ...tail];
 };
 
 const pullRest = (rope) =>
-  rope.forEach((knot, i, rope) => {
-    if (i === 0) return;
-    pull(rope[i - 1], knot);
+  rope.map((knot, i, rope) => {
+    if (i === 0) return knot;
+    return pull(rope[i - 1], knot);
   });
 
 const move = (rope, step) => {
-  moveHead(rope, step);
-  pullRest(rope);
+  const head = moveHead(rope, step);
+  return pullRest(head);
 };
 
 const pull = (head, tail) => {
   const xDiff = head[0] - tail[0];
   const yDiff = head[1] - tail[1];
   if (xDiff === 0) {
-    tail[1] += Math.sign(yDiff) * (Math.abs(yDiff) - 1);
+    return [tail[0], tail[1] + Math.sign(yDiff) * (Math.abs(yDiff) - 1)];
   } else if (yDiff === 0) {
-    tail[0] += Math.sign(xDiff) * (Math.abs(xDiff) - 1);
+    return [tail[0] + Math.sign(xDiff) * (Math.abs(xDiff) - 1), tail[1]];
   } else if (Math.abs(xDiff) > 1 || Math.abs(yDiff) > 1) {
-    tail[0] += Math.sign(xDiff);
-    tail[1] += Math.sign(yDiff);
+    return [tail[0] + Math.sign(xDiff), tail[1] + Math.sign(yDiff)];
   }
+  return tail;
 };
 
 const steps = input.map(parse).map(toSteps).flat();
 
-steps.forEach((step) => {
-  move(rope, step);
-  visit(rope);
-});
+steps
+  .reduce((ropes, step) => [...ropes, move(ropes[ropes.length - 1], step)], [rope])
+  .forEach(visit);
 
 console.log(visited.size);
