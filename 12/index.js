@@ -3,24 +3,27 @@ const fs = require("fs");
 const input = fs
   .readFileSync(__dirname + "/input.txt", "utf8")
   // .readFileSync(__dirname + "/test.txt", "utf8")
-  .split("\r\n");
+  .split("\r\n")
+  .map((line) => line.split(""));
 
 const start = (input) => {
-  for (let i = 0; i < input.length; i++) {
-    for (let j = 0; j < input[i].length; j++) {
-      if (input[i][j] === "S") {
-        return [i, j];
-      }
-    }
+  const starts = browse(input, (node) => node === "S");
+  if (starts.length === 0) {
+    throw new Error("No start found");
   }
-  throw new Error("No start found");
+  if (starts.length > 1) {
+    throw new Error("Multiple starts found");
+  }
+  return starts[0];
 };
 
-const allStarts = (input) => {
+const lowestElevations = (input) => browse(input, (node) => node === "S" || node === "a");
+
+const browse = (input, isStart) => {
   const result = [];
   for (let i = 0; i < input.length; i++) {
     for (let j = 0; j < input[i].length; j++) {
-      if (input[i][j] === "S" || input[i][j] === "a") {
+      if (isStart(input[i][j], input[i][j])) {
         result.push([i, j]);
       }
     }
@@ -36,52 +39,62 @@ const elevationAcceptable = (start, end) => {
   return end.charCodeAt(0) - start.charCodeAt(0) <= 1;
 };
 
-const neighbours = (input, row, col) => {
-  const result = [];
-  if (row > 0) {
-    result.push([row - 1, col]);
-  }
-  if (row < input.length - 1) {
-    result.push([row + 1, col]);
-  }
-  if (col > 0) {
-    result.push([row, col - 1]);
-  }
-  if (col < input[row].length - 1) {
-    result.push([row, col + 1]);
-  }
-  return result.filter(([newRow, newCol]) =>
-    elevationAcceptable(input[row][col], input[newRow][newCol])
-  );
-};
-
-const isFinish = (input, row, col) => {
-  return input[row][col] === "E";
-};
-
-const shortestPath = (input, [startRow, startCol]) => {
-  const visited = Array.from({ length: input.length }, () => Array(input[0].length).fill(false));
-  const queue = [[startRow, startCol, 0]];
-
-  while (queue.length > 0) {
-    const [row, col, step] = queue.shift();
-    if (visited[row][col]) {
-      continue;
+const neighbours =
+  (graph) =>
+  ([row, col]) => {
+    const result = [];
+    if (row > 0) {
+      result.push([row - 1, col]);
     }
-    visited[row][col] = true;
-    if (isFinish(input, row, col)) {
-      return step;
+    if (row < graph.length - 1) {
+      result.push([row + 1, col]);
     }
-    queue.push(
-      ...neighbours(input, row, col).map(([newRow, newCol]) => [newRow, newCol, step + 1])
+    if (col > 0) {
+      result.push([row, col - 1]);
+    }
+    if (col < graph[row].length - 1) {
+      result.push([row, col + 1]);
+    }
+    return result.filter(([newRow, newCol]) =>
+      elevationAcceptable(graph[row][col], graph[newRow][newCol])
     );
-  }
-  return Infinity;
-}
+  };
 
-console.log(shortestPath(input, start(input)));
+const isFinish =
+  (graph) =>
+  ([row, col]) => {
+    return graph[row][col] === "E";
+  };
 
-const minPath = allStarts(input)
-  .map((start) => shortestPath(input, start))
+const isVisited = (graph) => {
+  const visited = Array.from({ length: graph.length }, () => Array(graph[0].length).fill(false));
+
+  return ([row, col]) => {
+    const isVisited = visited[row][col];
+    visited[row][col] = true;
+    return isVisited;
+  };
+};
+
+const shortestPath = (startNode, neighbours, isFinish, isVisited) => {
+  const shortestPathRecursive = (nodes, step) => {
+    if (nodes.length === 0) {
+      return Infinity;
+    }
+    const notVisited = nodes.filter((node) => !isVisited(node));
+    if (notVisited.find(isFinish)) {
+      return step;
+    } else {
+      return shortestPathRecursive(notVisited.flatMap(neighbours), step + 1);
+    }
+  };
+
+  return shortestPathRecursive([startNode], 0);
+};
+
+console.log(shortestPath(start(input), neighbours(input), isFinish(input), isVisited(input)));
+
+const minPath = lowestElevations(input)
+  .map((start) => shortestPath(start, neighbours(input), isFinish(input), isVisited(input)))
   .reduce((min, current) => Math.min(min, current), Infinity);
 console.log(minPath);
