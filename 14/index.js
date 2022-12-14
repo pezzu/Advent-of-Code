@@ -72,8 +72,8 @@ const findRestPoint = (point, rocks, voidLevel) => {
       return point;
     }
 
-    if (nextPoint[1] >= voidLevel) {
-      return null;
+    if (nextPoint[1] === voidLevel - 1) {
+      return nextPoint;
     }
     point = nextPoint;
   }
@@ -92,13 +92,16 @@ let count = 0;
 
 while (true) {
   let point = start;
-  const restPoint = findRestPoint(point, filled, bottom);
+  const restPoint = findRestPoint(point, filled, bottom + 2);
 
   if (!restPoint) break;
+  if (restPoint[0] === start[0] && restPoint[1] === start[1]) {
+    count++;
+    break;
+  }
 
   count++;
   addRock(restPoint, filled);
 }
 
 console.log(count);
-// console.log(rocks);
