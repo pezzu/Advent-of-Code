@@ -1,5 +1,4 @@
 const fs = require("fs");
-const { disconnect } = require("process");
 
 const input = fs
   .readFileSync(__dirname + "/input.txt", "utf8")
