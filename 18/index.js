@@ -36,6 +36,18 @@ const isInBox = ([minX, minY, minZ], [maxX, maxY, maxZ]) => (cube) => {
 
 const not = (fn) => (...args) => !fn(...args);
 
+function* bfs(start, neighbors) {
+  const visited = new Set();
+  const queue = [start];
+  while (queue.length) {
+    const cube = queue.shift();
+    if (visited.has(JSON.stringify(cube))) continue;
+    visited.add(JSON.stringify(cube));
+    queue.push(...neighbors(cube));
+    yield cube;
+  }
+}
+
 const surface = (cubes) => {
   const mins = cubes.reduce((box, cube) => cube.map((c, i) => Math.min(box[i], c-1)), [Infinity, Infinity, Infinity]);
   const maxs = cubes.reduce((box, cube) => cube.map((c, i) => Math.max(box[i], c+1)), [-Infinity, -Infinity, -Infinity]);
@@ -43,18 +55,7 @@ const surface = (cubes) => {
   const emptyNeighbors = (cube) => neighbors(cube).filter(isInBox(mins, maxs)).filter(not(isExistsIn(cubes)));
   const solidNeighbors = (cube) => neighbors(cube).filter(isInBox(mins, maxs)).filter(isExistsIn(cubes));
 
-  const visited = new Set();
-  const queue = [mins];
-  let count = 0;
-
-  while (queue.length) {
-    const cube = queue.shift();
-    if (visited.has(JSON.stringify(cube))) continue;
-    visited.add(JSON.stringify(cube));
-    count += solidNeighbors(cube).length;
-    queue.push(...emptyNeighbors(cube));
-  }
-  return count;
+  return [...bfs(mins, emptyNeighbors)].reduce((sum, cube) => sum + solidNeighbors(cube).length, 0);
 };
 
 console.log(
